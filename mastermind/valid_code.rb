@@ -1,5 +1,6 @@
-module ValidCode
+# frozen_string_literal: true
 
+module ValidCode
   private
 
   def valid_code?(code)
