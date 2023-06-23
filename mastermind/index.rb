@@ -31,13 +31,13 @@ class Game
 
   def start_game
     assign_choices
-    play_game
+    start_game
   end
 
   private
 
-  def play_game
-    play_turn until game_over?
+  def start_game
+    play_turn until max_turn_reached?
   end
 
   def increment_turn
@@ -67,7 +67,7 @@ class Game
     separate
   end
 
-  def game_over?
+  def max_turn_reached?
     turn == MAX_TURNS || game_over
   end
 

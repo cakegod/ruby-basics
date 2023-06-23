@@ -59,7 +59,7 @@ class Game
     @is_game_over = false
   end
 
-  def game_over?
+  def max_turn_reached?
     @is_game_over
   end
 
@@ -95,7 +95,7 @@ end
 
 game = Game.new
 
-until game.game_over?
+until game.max_turn_reached?
   puts "#{game.current_player.marker} pick a position!"
   game.play_turn(gets.to_i)
 end
