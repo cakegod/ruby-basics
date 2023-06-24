@@ -1,84 +1,191 @@
 # frozen_string_literal: true
 
-require_relative 'user_input'
-require_relative 'display'
-require_relative 'word_picker'
-require 'yaml'
+# Picks a random word from the text file
+class WordGenerator
+  MIN_WORD_SIZE = 5
+  MAX_WORD_SIZE = 12
+  attr_reader :text_path
 
-# Manages game save
-class SaveManager
-  class << self
-    def load_game
-      File.open('game_save.yaml', 'r') if File.exist?('game_save.yaml') do |f|
-        YAML.safe_load(f, permitted_classes: [Game])
-      end
-    end
-
-    def save_game(game)
-      File.open('game_save.yaml', 'w') { |file| file.write(YAML.dump(game)) }
-    end
-  end
-end
-
-# Game handler
-class Game
-  include UserInput
-  include Display
-  include WordPicker
-
-  def initialize
-    @selected_word = pick_random_word
-    @picked_letters = []
-    @turn = 0
+  def initialize(text_path)
+    @text_path = text_path
   end
 
-  def start_game
-    play_turn until game_won? || game_lost?
-    puts game_won? ? display_win : display_lose
+  def random_word
+    select_valid_words.sample
+  end
+
+  def self.valid_word?(word)
+    word.size.between?(MIN_WORD_SIZE, MAX_WORD_SIZE)
   end
 
   private
 
-  def game_lost?
-    max_turn_reached?
+  def select_valid_words
+    words_list.select { |word| WordGenerator.valid_word?(word) }
   end
 
-  def game_won?
-    all_letters_found?
+  def words_list
+    IO.readlines(text_path, chomp: true)
+  end
+end
+
+# Handles game flow
+class Game
+  attr_reader :hangman, :player
+
+  def initialize(hangman:, player:)
+    @hangman = hangman
+    @player = player
+    @turns_left = 10
   end
 
-  def all_letters_found?
-    hangman.all? { |letter| letter != '_' }
+  def start_game
+    start_game_loop
   end
 
   def play_turn
-    picked_choice = pick_choice
-    return SaveManager.save_game(self) if picked_choice == 'save'
+    guess_letter
+    decrement_turn
+    return Display.turn_info(correct_word: correct_word, type: 'win') if win?
+    return Display.turn_info(correct_word: correct_word, type: 'lose') if lose?
 
-    picked_letters << pick_choice
-    increment_turn
-    display_turn_info(picked_letters.last, picked_letters, hangman)
+    display_turn_info
   end
 
-  def max_turn_reached?
-    turn == 25
+  private
+
+  def start_game_loop
+    loop do
+      play_turn
+    end
   end
 
-  def increment_turn
-    self.turn += 1
+  def display_turn_info
+    Display.turns_left(turns_left)
+    Display.hangman(hangman_word)
+    Display.separator
   end
 
-  def hangman
-    selected_word.split('').map { |letter| picked_letters.include?(letter) ? letter : '_' }
+  def lose?
+    turns_left.zero?
   end
 
-  attr_reader :selected_word, :picked_letters
-  attr_accessor :turn
+  def win?
+    hangman.none_masked?
+  end
+
+  def guess_letter
+    player.guess_letter
+  end
+
+  def hangman_word
+    hangman.masked_word
+  end
+
+  def correct_word
+    hangman.word
+  end
+
+  def decrement_turn
+    self.turns_left -= 1
+  end
+
+  attr_accessor :turns_left
 end
 
-loaded_game = SaveManager.load_game
-if loaded_game.instance_of?(Game)
-  loaded_game.start_game
-else
-  Game.new.start_game
+# Handles player input
+class Player
+  attr_reader :guessed_letters
+
+  def initialize
+    @guessed_letters = []
+  end
+
+  def guess_letter
+    loop do
+      Display.guess_letter
+
+      guess = gets.chomp.downcase
+      break guessed_letters << guess if valid_guess?(guess)
+
+      Display.invalid_letter
+    end
+  end
+
+  def valid_guess?(guess)
+    Player.single_letter?(guess) && Player.valid_character?(guess) && not_already_guessed?(guess)
+  end
+
+  class << self
+    def valid_character?(guess)
+      guess.match?(/[A-Za-z]/)
+    end
+
+    def single_letter?(guess)
+      guess.size == 1
+    end
+  end
+
+  private
+
+  def not_already_guessed?(guess)
+    !guessed_letters.include?(guess)
+  end
+
+  attr_writer :guessed_letters
 end
+
+# Handles hangman word
+class Hangman
+  attr_reader :word, :player
+
+  def initialize(word_picker, player)
+    @word = word_picker.random_word
+    @player = player
+    p @word
+  end
+
+  def masked_word
+    word.split('').map { |letter| guessed_letters.include?(letter) ? letter : '_' }
+  end
+
+  def guessed_letters
+    player.guessed_letters
+  end
+
+  def none_masked?
+    masked_word.all? { |letter| letter != '_' }
+  end
+end
+
+# Handles display
+module Display
+  def self.separator
+    puts '-' * 30
+  end
+
+  def self.hangman(word)
+    puts "Hangman: #{word.join(' ')}"
+  end
+
+  def self.turns_left(turns_left)
+    puts "Turns left: #{turns_left}"
+  end
+
+  def self.guess_letter
+    puts 'Make a guess letter:'
+  end
+
+  def self.invalid_letter
+    puts 'Invalid letter!'
+  end
+
+  def self.turn_info(correct_word:, type:)
+    puts "You #{type}! The correct word was: #{correct_word}"
+  end
+end
+
+new_player = Player.new
+hangman = Hangman.new(WordGenerator.new('words.txt'), new_player)
+new_game = Game.new(hangman: hangman, player: new_player)
+new_game.start_game
