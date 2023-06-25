@@ -9,12 +9,12 @@ def clean_zipcode(zipcode)
 end
 
 def legislators_by_zipcode(zip)
-  civic_info = Google::Apis::CivicinfoV2::CivicInfoService.new
+  civic_info     = Google::Apis::CivicinfoV2::CivicInfoService.new
   civic_info.key = 'AIzaSyClRzDqDh5MsXwnCWi0kOiiBivP6JsSyBw'
 
   begin
     civic_info.representative_info_by_address(address: zip, levels: 'country',
-                                              roles: %w[legislatorUpperBody legislatorLowerBody]).officials
+                                              roles:   %w[legislatorUpperBody legislatorLowerBody]).officials
   rescue StandardError
     'You can find your representatives by visiting www.commoncause.org/take-action/find-elected-officials'
   end
@@ -56,36 +56,41 @@ end
 
 puts 'EventManager initialized.'
 
-contents = CSV.open('event_attendees.csv', headers: true, header_converters: :symbol)
+contents = CSV.open('event_attendees.csv', headers: true, header_converters: :symbol).to_a
 
-template_letter = File.read('form_letter.erb')
-ERB.new template_letter
+# template_letter = File.read('form_letter.erb')
+# ERB.new template_letter
+#
+# contents.each do |row|
+#   id = row[0]
+#   name = row[:first_name]
+#   phone_number = clean_phone_number(row[:homephone])
+#   date = row[:regdate]
+#   zipcode = clean_zipcode(row[:zipcode])
+#   legislators = legislators_by_zipcode(zipcode)
+#
+#   form_letter = erb_template.result(binding)
+#
+# end
 
-contents.each do |row|
-  id = row[0]
-  name = row[:first_name]
-  phone_number = clean_phone_number(row[:homephone])
-  date = row[:regdate]
-  zipcode = clean_zipcode(row[:zipcode])
-  legislators = legislators_by_zipcode(zipcode)
+# Display top unit dates
+class TopTimeUnits
+  attr_reader :csv_data, :size
 
-  form_letter = erb_template.result(binding)
-
-end
-
-def parse_date(date)
-  Time.strptime(date, '%m/%d/%y %H:%M')
-end
-
-def extract_csv_dates(csv)
-  csv.map do |row|
-    date = row[:regdate]
-    parse_date(date)
+  def initialize(**args)
+    @csv_data = args[:csv_data]
+    @size     = args[:size] || default_size
   end
-end
 
-# Extracts the date from csv
-module Extractable
+  def show
+    extract_csv_dates(csv_data)
+      .then(&method(:extract_time_unit))
+      .then(&method(:group_top))
+      .then(&method(:display))
+  end
+
+  private
+
   def parse_date(date)
     Time.strptime(date, '%m/%d/%y %H:%M')
   end
@@ -96,10 +101,7 @@ module Extractable
       parse_date(date)
     end
   end
-end
 
-# Group items
-module Groupable
   def group_top(data)
     data
       .tally
@@ -107,71 +109,53 @@ module Groupable
       .last(size)
       .reverse
   end
+
+  def default_size
+    3
+  end
+
+  def extract_time_unit(dates)
+    raise 'Dates are empty' if dates.empty?
+
+    dates.map(&method(:define_time_unit))
+  end
+
+  def define_time_unit(_date)
+    raise NotImplementedError "#{self.class} does not implement this method..."
+  end
+
+  def display(_date)
+    raise NotImplementedError "#{self.class} does not implement this method..."
+  end
 end
 
-# Shows top registration hours
-class TopRegistrationHours
-  include Extractable
-  include Groupable
-
-  def initialize(csv_content, size = 3)
-    @csv_content = csv_content
-    @size = size
+# Displays top registration hours
+class TopHours < TopTimeUnits
+  def define_time_unit(date)
+    date.hour
   end
 
-  def show
-    extract_csv_dates(csv_content)
-      .then(&method(:to_hours))
-      .then(&method(:group_top))
-      .then(&method(:display_top_hours))
-  end
-
-  private
-
-  def display_top_hours(top_hours)
+  def display(top_hours)
     puts "The top #{size} hours are:"
     top_hours.each_with_index do |(hour, occurrences), index|
       puts " n°#{index + 1}: #{hour}h with #{occurrences} registrations"
     end
   end
-
-  def to_hours(dates)
-    dates.map(&:hour)
-  end
-
-  attr_reader :size, :csv_content
 end
 
-# Show top registration week days
-class TopWeekDays
-  include Extractable
-  include Groupable
-
-  def initialize(csv_content, size = 3)
-    @csv_content = csv_content
-    @size = size
+# Displays top registration days
+class TopWeekDays < TopTimeUnits
+  def define_time_unit(date)
+    Date::DAYNAMES[date.wday]
   end
 
-  def show
-    extract_csv_dates(csv_content)
-      .then(&method(:to_week_day))
-      .then(&method(:group_top))
-      .then(&method(:display_top_days))
-  end
-
-  private
-
-  def to_week_day(dates)
-    dates.map { |date| Date::DAYNAMES[date.wday] }
-  end
-
-  def display_top_days(top_days)
+  def display(top_days)
     puts "The top #{size} week days are:"
     top_days.each_with_index do |(week_day, occurrences), index|
       puts " n°#{index + 1}: #{week_day} with #{occurrences} registrations"
     end
   end
-
-  attr_reader :csv_content, :size
 end
 
+TopHours.new(csv_data: contents).show
+TopWeekDays.new(csv_data: contents).show
