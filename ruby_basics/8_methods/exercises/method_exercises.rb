@@ -58,11 +58,11 @@ end
 def pet_pun(animal)
   case animal
   when 'cat'
-   puts 'Cats are purr-fect!'
+    puts 'Cats are purr-fect!'
   when 'dog'
-   puts 'Dogs are paw-some!'
+    puts 'Dogs are paw-some!'
   else
-   puts "I think #{animal}s have pet-tential!"
+    puts "I think #{animal}s have pet-tential!"
   end
 end
 
@@ -74,4 +74,3 @@ end
 def twenty_first_century?(year)
   year.between?(2001, 2100)
 end
-

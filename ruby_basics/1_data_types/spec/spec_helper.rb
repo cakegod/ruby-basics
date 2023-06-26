@@ -12,6 +12,7 @@ end
 
 module FormatterOverrides
   def dump_pending(_)
+    ;
   end
 end
 

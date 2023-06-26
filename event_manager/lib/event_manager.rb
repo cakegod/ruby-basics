@@ -14,7 +14,7 @@ def legislators_by_zipcode(zip)
 
   begin
     civic_info.representative_info_by_address(address: zip, levels: 'country',
-                                              roles:   %w[legislatorUpperBody legislatorLowerBody]).officials
+                                              roles: %w[legislatorUpperBody legislatorLowerBody]).officials
   rescue StandardError
     'You can find your representatives by visiting www.commoncause.org/take-action/find-elected-officials'
   end
