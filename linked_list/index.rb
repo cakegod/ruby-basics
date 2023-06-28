@@ -27,33 +27,17 @@ class LinkedList
   end
 
   def size
-    return 0 if head.nil?
-
-    node = head
-    count = 1
-    until node.next_node.nil?
-      node = node.next_node
-      count += 1
-    end
-    count
+    iterate { |node, i| return i + 1 if tail?(node) }
   end
 
   def tail
-    node = head
-    node = node.next_node until node.next_node.nil?
-    node
+    iterate { |node| return node if tail?(node) }
   end
 
   def at(index)
-    return head if index.zero?
-
-    node = head
-    count = 0
-    until count == index
-      node = node.next_node
-      count += 1
+    iterate do |node, i|
+      return node if index == i
     end
-    node
   end
 
   def pop
@@ -61,11 +45,7 @@ class LinkedList
   end
 
   def find(value)
-    node = head
-    until node.next_node.nil?
-      node = node.next_node
-      return node if node.value == value
-    end
+    iterate { |node| return node if node.value == value }
   end
 
   def contains?(value)
@@ -73,22 +53,34 @@ class LinkedList
   end
 
   def to_s
+    iterate.map { |node| "(#{node.value}) ->" }.push('nil').join(' ')
+
+  end
+
+  def iterate
+    return enum_for(:iterate) unless block_given?
+
     node = head
-    string = []
-    until node.nil?
-      string << "(#{node.value}) ->"
+    index = 0
+    while node
+      yield(node, index)
+      index += 1
       node = node.next_node
     end
-    string << 'nil'
-    string.join(' ')
+  end
+
+  private
+
+  def tail?(node)
+    node.next_node.nil?
   end
 end
 
-p(LinkedList.new.tap do |linked_list|
+LinkedList.new.tap do |linked_list|
   linked_list.append(12)
   linked_list.append(22)
   linked_list.append(32)
   linked_list.append(4)
   linked_list.append(50)
-  p linked_list.tail
-end)
+  p linked_list.to_s
+end
