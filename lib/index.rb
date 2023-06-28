@@ -129,6 +129,10 @@ class Player
   def out_of_turns?
     tries_left.zero?
   end
+
+  def include_letter?(letter)
+    guessed_letters.include?(letter)
+  end
 end
 
 # Handles hangman word
@@ -141,11 +145,11 @@ class Hangman
   end
 
   def masked_word
-    word.split('').map { |letter| player.guessed_letters.include?(letter) ? letter : '_' }
+    word.split('').map { |letter| player.include_letter?(letter) ? letter : '_' }
   end
 
   def no_letters_masked?
-    masked_word.all? { |letter| letter != '_' }
+    masked_word.none? { |letter| letter == '_' }
   end
 end
 

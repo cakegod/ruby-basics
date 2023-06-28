@@ -2,24 +2,55 @@
 
 # Handles linked list node
 class Node
-  attr_accessor :value, :next_node
+  attr_reader :value, :next_node
 
   def initialize(**args)
     @value = args[:value] || nil
     @next_node = args[:next_node] || nil
   end
+
+  def swap_next_node(node)
+    self.next_node = node
+  end
+
+  def swap(node)
+    self.next_node = node.next_node
+    node.next_node = self
+  end
+
+  def pop
+    self.next_node = nil if penultimate?
+  end
+
+  def tail?
+    next_node.nil?
+  end
+
+  protected
+
+  def penultimate?
+    next_node.next_node.nil?
+  end
+
+  attr_writer :value, :next_node
 end
 
 # Handles linked list
 class LinkedList
-  attr_accessor :head
+  attr_reader :head
 
   def initialize(**args)
     @head = args[:head] || nil
   end
 
   def append(value)
-    head.nil? ? self.head = Node.new(value:) : tail.next_node = Node.new(value:)
+    new_node = LinkedList.create_node(value)
+
+    if head.nil?
+      self.head = new_node
+    else
+      tail&.swap_next_node(new_node)
+    end
   end
 
   def prepend(value)
@@ -27,29 +58,27 @@ class LinkedList
   end
 
   def size
-    iterate { |node, i| return i + 1 if tail?(node) }
+    iterate.each_with_index { |node, index| return index + 1 if node.tail? }
   end
 
   def tail
-    iterate { |node| return node if tail?(node) }
+    iterate.find(&:tail?)
   end
 
-  def at(index)
-    iterate do |node, i|
-      return node if at_correct_index?(index, i)
-    end
+  def at(index_arg)
+    iterate.find.each_with_index { |_, index| index_arg == index }
   end
 
   def pop
-    iterate { |node| return node.next_node = nil if node.next_node.next_node.nil? }
+    iterate(&:pop)
   end
 
   def find(value)
-    iterate { |node| return node if node.value == value }
+    iterate.find { |node| node.value == value }
   end
 
   def contains?(value)
-    !find(value).nil?
+    !!find(value)
   end
 
   def to_s
@@ -57,47 +86,35 @@ class LinkedList
   end
 
   def insert_at(value, index)
-    new_node = Node.new(value:)
-    iterate do |node, i|
-      if at_correct_index?(index, i)
-        new_node.next_node = node.next_node
-        node.next_node = new_node
-        return
-      end
-    end
-    raise "Invalid index: #{index} does not exist"
+    at(index).then { |node| LinkedList.create_node(value).swap(node) }
   end
 
   def iterate
     return enum_for(:iterate) unless block_given?
 
     node = head
-    index = 0
     while node
-      yield(node, index)
-      index += 1
+      yield(node)
       node = node.next_node
     end
   end
 
+  def self.create_node(value)
+    Node.new(value:)
+  end
+
   private
 
-  def tail?(node)
-    node.next_node.nil?
-  end
-
-  def at_correct_index?(first_index, second_index)
-    first_index == second_index
-  end
+  attr_writer :head
 end
 
-LinkedList.new.tap do |linked_list|
+p(LinkedList.new.tap do |linked_list|
   linked_list.append(12)
   linked_list.append(22)
   linked_list.append(32)
   linked_list.append(4)
   linked_list.append(50)
-  linked_list.pop
-  linked_list.insert_at(99, 5)
+  linked_list.insert_at(241, 2)
+  p "At: #{linked_list.at(2).value}"
   p linked_list.to_s
-end
+end)
