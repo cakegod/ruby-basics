@@ -2,13 +2,11 @@
 
 # The game-board
 class Board
-  class << self
-    attr_accessor :win_combinations
-  end
+  attr_reader :win_combinations, :board
 
   def initialize
     @board = Array.new(9, nil)
-    self.class.win_combinations =
+    @win_combinations =
       [[0, 1, 2],
        [3, 4, 5],
        [6, 7, 8],
@@ -20,7 +18,7 @@ class Board
   end
 
   def check_win(marker)
-    Board.win_combinations.find do |combination|
+    win_combinations.find do |combination|
       combination.all? { |index| @board[index].eql?(marker) }
     end
   end
@@ -49,7 +47,7 @@ end
 
 # Game
 class Game
-  attr_reader :current_player
+  attr_reader :current_player, :board
 
   def initialize
     @board = Board.new
@@ -59,43 +57,55 @@ class Game
     @is_game_over = false
   end
 
-  def max_turn_reached?
-    @is_game_over
-  end
-
-  def play_turn(index)
-    if index.between?(0, 8)
-      @board.place_marker(index, @current_player.marker)
-    else
-      puts 'Invalid choice, pick again:'
+  def game_loop
+    until max_turn_reached?
+      puts "#{current_player.marker} pick a position!"
+      play_turn(gets.to_i)
     end
-
-    @board.place_marker(index, @current_player.marker)
-    process_turn_result
   end
 
   private
 
+  def play_turn(index)
+    if index.between?(0, 8)
+      board.place_marker(index, current_player.marker)
+    else
+      puts 'Invalid choice, pick again:'
+    end
+
+    board.place_marker(index, current_player.marker)
+    process_turn_result
+  end
+
+  def max_turn_reached?
+    is_game_over
+  end
+
   def swap_player
-    @current_player = @current_player == @human_player ? @computer_player : @human_player
+    self.current_player = current_player == human_player ? computer_player : human_player
   end
 
   def process_turn_result
-    win = @board.check_win(@current_player.marker)
+    win = board.check_win(current_player.marker)
 
     if win.nil?
-      puts @board.see_board
+      puts board.see_board
       swap_player
     else
-      puts "Player #{@current_player.marker} wins at #{win}!"
-      @is_game_over = true
+      puts "Player #{current_player.marker} wins at #{win}!"
+      self.is_game_over = true
     end
   end
+
+  attr_reader :human_player, :computer_player
+  attr_writer :current_player
+  attr_accessor :is_game_over
 end
 
-game = Game.new
-
-until game.max_turn_reached?
-  puts "#{game.current_player.marker} pick a position!"
-  game.play_turn(gets.to_i)
-end
+#
+# game = Game.new
+#
+# until game.max_turn_reached?
+#   puts "#{game.current_player.marker} pick a position!"
+#   game.play_turn(gets.to_i)
+# end
