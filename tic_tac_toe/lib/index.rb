@@ -17,7 +17,7 @@ class Board
        [6, 4, 2]]
   end
 
-  def check_win(marker)
+  def find_win_combination(marker)
     win_combinations.find do |combination|
       combination.all? { |index| @board[index].eql?(marker) }
     end
@@ -45,67 +45,79 @@ class Player
   attr_reader :marker
 end
 
-# Game
-class Game
-  attr_reader :current_player, :board
-
-  def initialize
-    @board = Board.new
-    @human_player = Player.new('x')
-    @computer_player = Player.new('o')
+# Manages players
+class PlayersManager
+  def initialize(human_player:, computer_player:)
+    @human_player = human_player
+    @computer_player = computer_player
     @current_player = @human_player
-    @is_game_over = false
-  end
-
-  def game_loop
-    until max_turn_reached?
-      puts "#{current_player.marker} pick a position!"
-      play_turn(gets.to_i)
-    end
-  end
-
-  private
-
-  def play_turn(index)
-    if index.between?(0, 8)
-      board.place_marker(index, current_player.marker)
-    else
-      puts 'Invalid choice, pick again:'
-    end
-
-    board.place_marker(index, current_player.marker)
-    process_turn_result
-  end
-
-  def max_turn_reached?
-    is_game_over
   end
 
   def swap_player
     self.current_player = current_player == human_player ? computer_player : human_player
   end
 
-  def process_turn_result
-    win = board.check_win(current_player.marker)
+  def current_player_marker
+    current_player.marker
+  end
 
-    if win.nil?
-      puts board.see_board
-      swap_player
-    else
-      puts "Player #{current_player.marker} wins at #{win}!"
-      self.is_game_over = true
+  private
+
+  attr_reader :human_player, :computer_player
+  attr_accessor :current_player
+end
+
+# Game
+class Game
+  attr_reader :current_player, :board, :players_manager
+
+  def initialize(players_manager, input: -> { gets })
+    @board = Board.new
+    @players_manager = players_manager
+    @game_over = false
+    @input = input
+  end
+
+  def game_loop
+    until game_over
+      puts "#{players_manager.current_player_marker} pick a position!"
+      play_turn
     end
+  end
+
+  private
+
+  def play_turn
+    index = @input.call.to_i
+
+    if index.between?(0, 8)
+      board.place_marker(index, players_manager.current_player_marker)
+    else
+      puts 'Invalid choice, pick again:'
+    end
+
+    process_turn_result
+  end
+
+  def process_turn_result
+    marker = players_manager.current_player_marker
+    win_combination = board.find_win_combination(marker)
+
+    if win_combination
+      puts "Player #{marker} wins at #{win_combination}!"
+      self.game_over = true
+    end
+
+    puts board.see_board
+    players_manager.swap_player
+
   end
 
   attr_reader :human_player, :computer_player
   attr_writer :current_player
-  attr_accessor :is_game_over
+  attr_accessor :game_over
 end
 
-#
-# game = Game.new
-#
-# until game.max_turn_reached?
-#   puts "#{game.current_player.marker} pick a position!"
-#   game.play_turn(gets.to_i)
-# end
+# players_manager = PlayersManager.new(human_player: Player.new('X'), computer_player: Player.new('O'))
+# game = Game.new(players_manager)
+# game.game_loop
