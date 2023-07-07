@@ -4,21 +4,21 @@
 class GameBoard
   attr_reader :win_combinations, :board
 
+  WIN_COMBINATIONS = [[0, 1, 2],
+                      [3, 4, 5],
+                      [6, 7, 8],
+                      [0, 3, 6],
+                      [1, 4, 7],
+                      [2, 5, 8],
+                      [0, 4, 8],
+                      [6, 4, 2]].freeze
+
   def initialize(board = Array.new(9, nil))
     @board = board
-    @win_combinations =
-      [[0, 1, 2],
-       [3, 4, 5],
-       [6, 7, 8],
-       [0, 3, 6],
-       [1, 4, 7],
-       [2, 5, 8],
-       [0, 4, 8],
-       [6, 4, 2]]
   end
 
   def find_win_combination(marker)
-    win_combinations.find do |combination|
+    WIN_COMBINATIONS.find do |combination|
       combination.all? { |index| @board[index].eql?(marker) }
     end
   end
@@ -126,4 +126,3 @@ end
 # players_manager = PlayersManager.new(human_player: Player.new('X'), computer_player: Player.new('O'))
 # game = Game.new(players_manager)
 # game.game_loop
-
