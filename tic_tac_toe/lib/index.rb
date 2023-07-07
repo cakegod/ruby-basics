@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 # The game-board
-class Board
+class GameBoard
   attr_reader :win_combinations, :board
 
-  def initialize
-    @board = Array.new(9, nil)
+  def initialize(board = Array.new(9, nil))
+    @board = board
     @win_combinations =
       [[0, 1, 2],
        [3, 4, 5],
@@ -23,8 +23,14 @@ class Board
     end
   end
 
-  def place_marker(index, marker)
-    @board[index] = marker
+  def valid_position?(position)
+    position.between?(0, 8)
+  end
+
+  def place_marker(position, marker)
+    raise ArgumentError, 'Invalid position' unless valid_position?(position)
+
+    @board[position] = marker
   end
 
   def see_board
@@ -47,7 +53,7 @@ end
 
 # Manages players
 class PlayersManager
-  def initialize(human_player:, computer_player:)
+  def initialize(human_player: Player.new('X'), computer_player: Player.new('O'))
     @human_player = human_player
     @computer_player = computer_player
     @current_player = @human_player
@@ -71,8 +77,8 @@ end
 class Game
   attr_reader :current_player, :board, :players_manager
 
-  def initialize(players_manager, input: -> { gets })
-    @board = Board.new
+  def initialize(players_manager: PlayersManager.new, input: -> { gets })
+    @board = GameBoard.new
     @players_manager = players_manager
     @game_over = false
     @input = input
@@ -110,7 +116,6 @@ class Game
 
     puts board.see_board
     players_manager.swap_player
-
   end
 
   attr_reader :human_player, :computer_player
@@ -121,3 +126,4 @@ end
 # players_manager = PlayersManager.new(human_player: Player.new('X'), computer_player: Player.new('O'))
 # game = Game.new(players_manager)
 # game.game_loop
+
