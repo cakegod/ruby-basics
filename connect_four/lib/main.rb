@@ -1,13 +1,14 @@
 # frozen_string_literal: true
 
 NUMBER_OF_COLUMNS = 7
-NUMBER_OF_ROWS = 6
 
 # Handles columns of the gameboard
 class Column
-  attr_reader :rows
 
-  VERTICAL_WIN_COMBINATIONS = (0...NUMBER_OF_ROWS).each_cons(4).to_a
+  NUMBER_OF_ROWS = 6
+  NUMBER_OF_ROWS = 6
+  VERTICAL_WIN_COMBINATIONS = (0...NUMBER_OF_ROWS).each_cons(4).to_a.freeze
+  HORIZONTAL_WIN_COMBINATIONS = (0...NUMBER_OF_COLUMNS).each_cons(4).to_a.freeze
 
   def initialize(rows: Array.new(NUMBER_OF_ROWS, ''))
     @rows = rows
@@ -26,14 +27,15 @@ class Column
   private
 
   def last_empty_position
-    rows.index('')
+    rows.rindex('')
   end
+
+  attr_reader :rows
+
 end
 
 # Handles the gameboard
 class GameBoard
-  attr_reader :board
-
   def initialize(board: Array.new(NUMBER_OF_COLUMNS) { Column.new })
     @board = board
     @last = nil
@@ -49,10 +51,13 @@ class GameBoard
 
   def check_win(_marker)
     [[0, 0], [1, 0], [2, 0], [3, 0]]
+
+    # horizontal_win?
+    # vertical_win?
+    # diagonal_win?
   end
 
   private
 
-  attr_writer :board
-  attr_accessor :last
+  attr_accessor :board, :last
 end
